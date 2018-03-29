@@ -79,7 +79,7 @@ uint8_t MODE_SELECTION = 0;
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	int count = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -115,6 +115,9 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+	  //Send message to UART port
+	  printf("\n\rHelloWorld %d", count++);
+
 	  if (MODE_SELECTION == 0) {
 		  /* Toggle LEDs -Use the HAL functions from stm32l4xx_hal_gpio.c file */
 		  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7); //LD1 (green) –PC7
@@ -228,8 +231,8 @@ static void MX_LPUART1_UART_Init(void)
 {
 
   hlpuart1.Instance = LPUART1;
-  hlpuart1.Init.BaudRate = 209700;
-  hlpuart1.Init.WordLength = UART_WORDLENGTH_7B;
+  hlpuart1.Init.BaudRate = 115200;
+  hlpuart1.Init.WordLength = UART_WORDLENGTH_8B;
   hlpuart1.Init.StopBits = UART_STOPBITS_1;
   hlpuart1.Init.Parity = UART_PARITY_NONE;
   hlpuart1.Init.Mode = UART_MODE_TX_RX;
@@ -383,6 +386,12 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+int _write(int file, char *ptr, int len)
+{
+	HAL_UART_Transmit(&hlpuart1,(uint8_t *)ptr,len,HAL_MAX_DELAY);
+	return len;
+}
+
 /**
 * @brief EXTI line detection callback. The function will be call by EXTI15_10_IRQHandler in “stm32l4xx_it.c” .
 * @paramGPIO_Pin: Specifies the pins connected EXTI line
