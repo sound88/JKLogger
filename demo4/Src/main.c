@@ -67,7 +67,8 @@ static void MX_ADC1_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+static void logInit(void);
+static void logProcess(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -82,7 +83,7 @@ uint8_t MODE_SELECTION = 0;
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	int count = 0;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -108,7 +109,7 @@ int main(void)
   MX_USB_OTG_FS_PCD_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-
+  logInit();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -119,9 +120,17 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	  //Send message to UART port
-	  printf("\n\rHelloWorld %d", count++);
+#if 1
+	  if (MODE_SELECTION == 0) {
+		  logProcess();
+	  }
+	  else
+	  {
 
+	  }
+#else
+      //Send message to UART port
+      printf("\n\rHelloWorld %d", count++);
 	  if (MODE_SELECTION == 0) {
 		  /* Toggle LEDs -Use the HAL functions from stm32l4xx_hal_gpio.c file */
 		  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7); //LD1 (green) –PC7
@@ -135,6 +144,7 @@ int main(void)
 		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);//LD1 (green) –PC7
 		  HAL_Delay(1000);//1secs
 	  }
+#endif
   }
   /* USER CODE END 3 */
 
@@ -435,6 +445,59 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+static uint32_t count = 0;
+uint32_t raw[2] = {0,0};
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+	raw[0] = HAL_ADC_GetValue(hadc);
+	//raw[count%2] = HAL_ADC_GetValue(hadc);
+	//HAL_ADC_Start_IT(hadc);
+}
+static void logInit(void)
+{
+//	HAL_ADC_Start(&g_AdcHandle);
+	count=0;
+	HAL_ADC_Start_IT(&hadc1);
+}
+
+static void logProcess(void)
+{
+	static uint32_t log_msTick = 0;
+	if(HAL_GetTick()-log_msTick > 1000)
+	{
+//		if (HAL_ADC_PollForConversion(&g_AdcHandle, 1000000) == HAL_OK)
+//		{
+//			g_ADCValue = HAL_ADC_GetValue(&g_AdcHandle);
+//			g_MeasurementNumber++;
+//		}
+		//Send message to UART port
+		//printf("\n\r%d,%d,%d", count, raw[0], raw[1]);
+		printf("\n\r%d,%d", count, raw[0]);
+		/*switch channel*/
+		{
+			ADC_ChannelConfTypeDef sConfig;
+
+			/**Configure Regular Channel
+			*/
+			count++;
+//			if(count%0)
+//				sConfig.Channel = ADC_CHANNEL_3;
+//			else
+//				sConfig.Channel = ADC_CHANNEL_16;
+//			sConfig.Rank = ADC_REGULAR_RANK_1;
+//			sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+//			sConfig.SingleDiff = ADC_SINGLE_ENDED;
+//			sConfig.OffsetNumber = ADC_OFFSET_NONE;
+//			sConfig.Offset = 0;
+//			if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+//			{
+//				_Error_Handler(__FILE__, __LINE__);
+//			}
+			HAL_ADC_Start_IT(&hadc1);
+		}
+		log_msTick = HAL_GetTick();
+	}
+}
 int _write(int file, char *ptr, int len)
 {
 	HAL_UART_Transmit(&hlpuart1,(uint8_t *)ptr,len,HAL_MAX_DELAY);
