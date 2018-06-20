@@ -250,14 +250,14 @@ static void MX_ADC1_Init(void)
     /**Common config 
     */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   hadc1.Init.LowPowerAutoWait = DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.NbrOfConversion = 2;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.NbrOfDiscConversion = 1;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
@@ -278,6 +278,15 @@ static void MX_ADC1_Init(void)
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+    /**Configure Regular Channel 
+    */
+  sConfig.Channel = ADC_CHANNEL_16;
+  sConfig.Rank = ADC_REGULAR_RANK_2;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -445,10 +454,10 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-typedef enum {
+enum {
 	ADC_CH_A = 0,	/*CON10 Pin7 channel 16*/
 	ADC_CH_B,		/*CON10 Pin9 channel 3*/
-}ADC_CH_NUM;
+}adc_idx = ADC_CH_A;
 static uint32_t count = 0;
 /*
  * ADC_A_IN Channal 16
@@ -456,7 +465,15 @@ static uint32_t count = 0;
 uint32_t raw[2] = {0,0};
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-	raw[0] = HAL_ADC_GetValue(hadc);
+	if(__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOC))
+	{
+		raw[adc_idx] = HAL_ADC_GetValue(hadc);
+		adc_idx++;
+	}
+	if(__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOS))
+	{
+		adc_idx = 0;
+	}
 	//raw[count%2] = HAL_ADC_GetValue(hadc);
 }
 static void logInit(void)
@@ -477,7 +494,7 @@ static void logProcess(void)
 //			g_MeasurementNumber++;
 //		}
 		//Send message to UART port
-		printf("\n\r%04d,%04d,%04d", count, raw[0], raw[1]);
+		printf("\n%04d,%04d,%04d", count, raw[0], raw[1]);
 		/*switch channel*/
 		{
 			ADC_ChannelConfTypeDef sConfig;
@@ -498,7 +515,7 @@ static void logProcess(void)
 //			{
 //				_Error_Handler(__FILE__, __LINE__);
 //			}
-			HAL_ADC_Start_IT(&hadc1);
+			//HAL_ADC_Start_IT(&hadc1);
 		}
 		log_msTick = HAL_GetTick();
 	}
