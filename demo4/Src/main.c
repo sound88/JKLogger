@@ -445,13 +445,19 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+typedef enum {
+	ADC_CH_A = 0,	/*CON10 Pin7 channel 16*/
+	ADC_CH_B,		/*CON10 Pin9 channel 3*/
+}ADC_CH_NUM;
 static uint32_t count = 0;
+/*
+ * ADC_A_IN Channal 16
+ * ADC_B_IN Channal 3*/
 uint32_t raw[2] = {0,0};
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
 	raw[0] = HAL_ADC_GetValue(hadc);
 	//raw[count%2] = HAL_ADC_GetValue(hadc);
-	//HAL_ADC_Start_IT(hadc);
 }
 static void logInit(void)
 {
@@ -471,19 +477,18 @@ static void logProcess(void)
 //			g_MeasurementNumber++;
 //		}
 		//Send message to UART port
-		//printf("\n\r%d,%d,%d", count, raw[0], raw[1]);
-		printf("\n\r%d,%d", count, raw[0]);
+		printf("\n\r%04d,%04d,%04d", count, raw[0], raw[1]);
 		/*switch channel*/
 		{
 			ADC_ChannelConfTypeDef sConfig;
 
 			/**Configure Regular Channel
 			*/
-			count++;
+			count=(count+1)%10000;
 //			if(count%0)
-//				sConfig.Channel = ADC_CHANNEL_3;
+//				sConfig.Channel = ADC_CHANNEL_3;	/*IN3 PC2 ADC_B_IN*/
 //			else
-//				sConfig.Channel = ADC_CHANNEL_16;
+//				sConfig.Channel = ADC_CHANNEL_16;	/*IN3 PB1 ADC_A_IN*/
 //			sConfig.Rank = ADC_REGULAR_RANK_1;
 //			sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
 //			sConfig.SingleDiff = ADC_SINGLE_ENDED;
