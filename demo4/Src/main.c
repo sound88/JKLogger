@@ -462,12 +462,22 @@ static uint32_t count = 0;
 /*
  * ADC_A_IN Channal 16
  * ADC_B_IN Channal 3*/
-uint32_t raw[2] = {0,0};
+#define SAMPLING_NUM	64
+uint8_t first_round = 0;
+//uint32_t raw_a[SAMPLING_NUM];
+//uint32_t raw_b[SAMPLING_NUM];
+uint32_t raw_t[2] = {0,0};
+uint32_t raw[2][SAMPLING_NUM] = {0};
+uint32_t raw_sum[2] = {0,0};
+uint32_t raw_avg[2] = {0,0};
+
+uint16_t sampling_idx = 0;
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
 	if(__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOC))
 	{
-		raw[adc_idx] = HAL_ADC_GetValue(hadc);
+		//raw[adc_idx][sampling_idx] = HAL_ADC_GetValue(hadc);
+		raw_t[adc_idx] = HAL_ADC_GetValue(hadc);
 		adc_idx++;
 	}
 	if(__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOS))
@@ -486,15 +496,55 @@ static void logInit(void)
 static void logProcess(void)
 {
 	static uint32_t log_msTick = 0;
+	static uint32_t sampling_msTick = 0;
+
+	static uint16_t raw_idx = 0;
+	static uint16_t max_sampling = 0;
+	/*average*/
+#if 1
+	if(HAL_GetTick()-sampling_msTick > 10)
+	{
+		raw_sum[0] = 0;
+		raw_sum[1] = 0;
+
+		uint16_t max_sampling = 0;
+
+		raw[0][raw_idx] = raw_t[0];
+		raw[1][raw_idx] = raw_t[1];
+		raw_idx++;
+		if(raw_idx == SAMPLING_NUM)
+		{
+			raw_idx=0;
+			first_round = 1;
+		}
+		sampling_msTick = HAL_GetTick();
+	}
+#endif
+
+	//Send message to UART port
 	if(HAL_GetTick()-log_msTick > 1000)
 	{
-//		if (HAL_ADC_PollForConversion(&g_AdcHandle, 1000000) == HAL_OK)
-//		{
-//			g_ADCValue = HAL_ADC_GetValue(&g_AdcHandle);
-//			g_MeasurementNumber++;
-//		}
-		//Send message to UART port
-		printf("\n%04d,%04d,%04d", count, raw[0], raw[1]);
+		if(first_round == 0)
+		{
+			max_sampling = raw_idx;
+		}
+		else
+		{
+			max_sampling = SAMPLING_NUM;
+		}
+		for(uint16_t i = 0;i<2;i++)
+		{
+			for(uint16_t j = 0;j<max_sampling;j++)
+			{
+				raw_sum[i] += raw[i][j];
+			}
+		}
+		raw_avg[0] = raw_sum[0]/max_sampling;
+		raw_avg[1] = raw_sum[1]/max_sampling;
+
+		printf("\n%04d,%04d,%04d", count, raw_avg[0], raw_avg[1]);
+
+		//printf("\n%04d,%04d,%04d", count, raw_t[0], raw_t[1]);
 		/*switch channel*/
 		{
 			ADC_ChannelConfTypeDef sConfig;
